@@ -40,7 +40,7 @@
 
 ; create-tree: string -> huffman-tree
 (define (create-tree source)
-  (make-leaf-node/all (counting source)))
+  (car (make-leaf-node/all (counting source))))
 
 ; counting: string -> huffman-tree
 (define (counting source)
@@ -93,9 +93,28 @@
 
 ; encode: string huffman-tree -> (listof number)
 (define (encode source tree)
-  '())
+  (if (null? source)
+      '()
+      (let ((code (get-code (string-ref source 0) tree)))
+        (if (= (string-length source) 1)
+            code
+            (append code (encode (substring source 1)  tree))))))
 
 ; get-code: character huffman-tree -> (listof number)
+(define (get-code character tree)
+  (cond
+    ((null? tree) false)
+    ((leaf-node? tree)
+     (if (eq? character (leaf-node-character tree))
+         '()
+         false))
+    (else
+     (let ((found-left (get-code character (branch-node-left tree))))
+       (if (list? found-left)
+           (cons 0 found-left)
+           (cons 1 (get-code character (branch-node-right tree))))))))
+
+
 
 ; decompression: (listof number) huffman-tree -> string
 
