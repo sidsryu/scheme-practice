@@ -62,7 +62,7 @@
             (char (leaf-node-character (car huffman-tree)))
             (first (car huffman-tree))
             (rest (cdr huffman-tree)))        
-        (if (eq? character char)
+        (if (equal? character char)
             (cons (make-leaf-node (inc count) character) rest)
             (cons first (accumulate-count character rest))))))
 
@@ -106,7 +106,7 @@
   (cond
     ((null? tree) false)
     ((leaf-node? tree)
-     (if (eq? character (leaf-node-character tree))
+     (if (equal? character (leaf-node-character tree))
          '()
          false))
     (else
@@ -118,13 +118,24 @@
 
 
 ; decompression: (listof number) huffman-tree -> string
+(define (decompression source tree)
+  (list->string (decode source tree tree)))
 
-; decode: (listof number) huffman-tree -> string
+; decode: (listof number) huffman-tree huffman-tree -> string
+(define (decode source node tree)
+  (cond
+    ((leaf-node? node) (cons (leaf-node-character node) (decode source tree tree)))
+    ((null? source) '())
+    (else (decode (cdr source) (next-node (car source) node) tree))))
 
-; get-charactor: (listof number) huffman-tree -> character
+; next-node: number huffman-tree -> huffman-tree
+(define (next-node n tree)
+  (if (= n 0)
+      (branch-node-left tree)
+      (branch-node-right tree)))
 
 
-(define lyric
+(define Lyric
 "Is this the real life?
 Is this just fantasy?
 Caught in a landslide
@@ -178,4 +189,10 @@ Nothing really matters
 Nothing really matters to me
 Anyway the wind blows")
 
-(compression lyric)
+(define HuffmanCoding (compression Lyric))
+(define HuffmanTree (car HuffmanCoding))
+(define Compressed (cadr HuffmanCoding))
+
+(define Decompressed (decompression Compressed HuffmanTree))
+
+(equal? Lyric Decompressed)
