@@ -36,7 +36,8 @@
 
 ; compression: string -> huffman-tree (listof number)
 (define (compression source)
-  (encode source (create-tree source)))
+  (let ((huffman-tree (create-tree source)))
+    (list huffman-tree (encode source huffman-tree))))
 
 ; create-tree: string -> huffman-tree
 (define (create-tree source)
