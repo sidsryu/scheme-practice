@@ -55,10 +55,12 @@
   (let ((huffman-tree (create-huffman-tree source)))
     (list huffman-tree (encode source huffman-tree))))
 
+
 ; create-huffman-tree: string -> node
 ;   return a root node of huffman tree
 (define (create-huffman-tree source)
   (frequency-table->huffman-tree (make-frequency-table source)))
+
 
 ; make-frequency-table: string -> (listof nodes)
 ;   the frequency table is a list of leaf nodes
@@ -78,8 +80,9 @@
     (cond
       ((null? nodes) (list (make-new-node)))
       ((found-node?) (cons (make-increased-node) (cdr nodes)))
-      (else (cons (car nodes) (increase-count character (cdr nodes))))))  
+      (else (cons (car nodes) (increase-count character (cdr nodes))))))
   (iter 0 (string-length source) '()))
+
 
 ; frequency-table->huffman-tree: (listof nodes) -> node
 ;    merge all nodes below a single root
@@ -97,6 +100,7 @@
             (cddr l))))
   (car (merge/all nodes)))
 
+
 ; sort/ascending: (listof nodes) -> (listof nodes)
 ;   insertion sort
 (define (sort/ascending nodes)
@@ -109,6 +113,7 @@
       '()
       (insert (car nodes) (sort/ascending (cdr nodes)))))
 
+
 ; encode: string node -> (listof number)
 ;   string with huffman tree to a list of numbers(2base)
 (define (encode source tree)
@@ -117,40 +122,34 @@
         '()
         (append (get-code (string-ref source begin) tree)
                 (iter (inc begin) end))))
+  (define (get-code character node)
+    (cond
+      ((null? node) false)
+      ((leaf-node? node)
+       (if (equal? character (leaf-node-character node))
+           '()
+           false))
+      (else
+       (let ((found-left (get-code character (branch-node-left node))))
+         (if (list? found-left)
+             (cons 0 found-left)
+             (cons 1 (get-code character (branch-node-right node))))))))
   (iter 0 (string-length source)))
 
-; get-code: character huffman-tree -> (listof number)
-(define (get-code character tree)
-  (cond
-    ((null? tree) false)
-    ((leaf-node? tree)
-     (if (equal? character (leaf-node-character tree))
-         '()
-         false))
-    (else
-     (let ((found-left (get-code character (branch-node-left tree))))
-       (if (list? found-left)
-           (cons 0 found-left)
-           (cons 1 (get-code character (branch-node-right tree))))))))
 
-
-
-; decompression: (listof number) huffman-tree -> string
+; decompression: (listof numbers) node -> string
+;   a list of numbers(2base) with huffman tree to string
 (define (decompression source tree)
-  (decode source tree tree))
-
-; decode: (listof number) huffman-tree huffman-tree -> string
-(define (decode source node tree)
-  (cond
-    ((leaf-node? node) (string-append (string (leaf-node-character node)) (decode source tree tree)))
-    ((null? source) "")
-    (else (decode (cdr source) (next-node (car source) node) tree))))
-
-; next-node: number huffman-tree -> huffman-tree
-(define (next-node n tree)
-  (if (= n 0)
-      (branch-node-left tree)
-      (branch-node-right tree)))
+  (define (decode s node)
+    (cond
+      ((leaf-node? node) (string-append (string (leaf-node-character node)) (decode s tree)))
+      ((null? s) "")
+      (else (decode (cdr s) (next-node (car s) node)))))
+  (define (next-node bit branch)
+    (if (= bit 0)
+        (branch-node-left branch)
+        (branch-node-right branch)))
+  (decode source tree))
 
 
 ; Test
