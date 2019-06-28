@@ -117,13 +117,13 @@
 
 ; decompression: (listof number) huffman-tree -> string
 (define (decompression source tree)
-  (list->string (decode source tree tree)))
+  (decode source tree tree))
 
 ; decode: (listof number) huffman-tree huffman-tree -> string
 (define (decode source node tree)
   (cond
-    ((leaf-node? node) (cons (leaf-node-character node) (decode source tree tree)))
-    ((null? source) '())
+    ((leaf-node? node) (string-append (string (leaf-node-character node)) (decode source tree tree)))
+    ((null? source) "")
     (else (decode (cdr source) (next-node (car source) node) tree))))
 
 ; next-node: number huffman-tree -> huffman-tree
