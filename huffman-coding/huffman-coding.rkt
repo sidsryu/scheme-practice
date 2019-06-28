@@ -112,12 +112,12 @@
 ; encode: string node -> (listof number)
 ;   string with huffman tree to a list of numbers(2base)
 (define (encode source tree)
-  (if (null? source)
-      '()
-      (let ((code (get-code (string-ref source 0) tree)))
-        (if (= (string-length source) 1)
-            code
-            (append code (encode (substring source 1)  tree))))))
+  (define (iter begin end)
+    (if (= begin end)
+        '()
+        (append (get-code (string-ref source begin) tree)
+                (iter (inc begin) end))))
+  (iter 0 (string-length source)))
 
 ; get-code: character huffman-tree -> (listof number)
 (define (get-code character tree)
