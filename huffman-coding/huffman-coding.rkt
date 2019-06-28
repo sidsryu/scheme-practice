@@ -1,96 +1,116 @@
 #lang planet neil/sicp
 
 ; Huffman coding
-;   a source string to a list of number(2 base)
+;   a source string to a list of numbers(2 base)
 
 ; huffman-tree-node
-(define (make-leaf-node count character) (list count character))
-(define (leaf-node-count node) (car node))
-(define (leaf-node-character node) (cadr node))
+;   leaf-node
+(define (make-leaf-node count char)
+  (list count char))
+
+(define (leaf-node-count node)
+  (car node))
+
+(define (leaf-node-character node)
+  (cadr node))
+
 (define (leaf-node? node)
-  (and
-   (list? node)
-   (= 2 (length node))
-   (number? (leaf-node-count node))
-   (char? (leaf-node-character node))))
+  (and (list? node)
+       (= 2 (length node))
+       (number? (leaf-node-count node))
+       (char? (leaf-node-character node))))
 
-(define (make-branch-node count left right) (list count left right))
-(define (branch-node-count node) (car node))
-(define (branch-node-left node) (cadr node))
-(define (branch-node-right node) (caddr node))
+;   branch-node
+(define (make-branch-node count left right)
+  (list count left right))
+
+(define (branch-node-count node)
+  (car node))
+
+(define (branch-node-left node)
+  (cadr node))
+
+(define (branch-node-right node)
+  (caddr node))
+
 (define (branch-node? node)
-  (and
-   (list? node)
-   (= 3 (length node))
-   (number? (branch-node-count node))
-   (let ((left (branch-node-left node))
-         (right (branch-node-right node)))
-     (or (leaf-node? left) (branch-node? left))
-     (or (leaf-node? right) (branch-node? right)))))
+  (and (list? node)
+       (= 3 (length node))
+       (number? (branch-node-count node))
+       (let ((left (branch-node-left node))
+             (right (branch-node-right node)))
+         (or (leaf-node? left) (branch-node? left))
+         (or (leaf-node? right) (branch-node? right)))))
 
+;   node common procedure
 (define (node-count node)
   (if (leaf-node? node)
       (leaf-node-count node)
       (branch-node-count node)))
 
 
-; compression: string -> huffman-tree (listof number)
+; compression: string -> node (listof numbers)
+;   a source text to a list of numbers(2base) with huffman tree
 (define (compression source)
-  (let ((huffman-tree (create-tree source)))
+  (let ((huffman-tree (create-huffman-tree source)))
     (list huffman-tree (encode source huffman-tree))))
 
-; create-tree: string -> huffman-tree
-(define (create-tree source)
-  (car (make-leaf-node/all (counting source))))
+; create-huffman-tree: string -> node
+;   return a root node of huffman tree
+(define (create-huffman-tree source)
+  (frequency-table->huffman-tree (make-frequency-table source)))
 
-; counting: string -> huffman-tree
-(define (counting source)
-  (define (counting-iter source begin end tree)
+; make-frequency-table: string -> (listof nodes)
+;   the frequency table is a list of leaf nodes
+(define (make-frequency-table source)
+  (define (iter begin end nodes)
     (if (= begin end)
-        tree
-        (counting-iter source (inc begin) end
-                       (accumulate-count (string-ref source begin) tree))))
-  (counting-iter source 0 (string-length source) '()))
+        nodes
+        (iter (inc begin) end
+              (increase-count (string-ref source begin) nodes))))
+  (define (increase-count character nodes)
+    (define (make-new-node)
+      (make-leaf-node 1 character))
+    (define (make-increased-node)
+      (make-leaf-node (inc (leaf-node-count (car nodes))) (leaf-node-character (car nodes))))
+    (define (found-node?)
+      (equal? character (leaf-node-character (car nodes))))
+    (cond
+      ((null? nodes) (list (make-new-node)))
+      ((found-node?) (cons (make-increased-node) (cdr nodes)))
+      (else (cons (car nodes) (increase-count character (cdr nodes))))))  
+  (iter 0 (string-length source) '()))
 
-; accumulate-count: character huffman-tree -> huffman-tree
-(define (accumulate-count character huffman-tree)
-  (if (null? huffman-tree)
-      (list (make-leaf-node 1 character))
-      (let ((count (leaf-node-count (car huffman-tree)))
-            (char (leaf-node-character (car huffman-tree)))
-            (first (car huffman-tree))
-            (rest (cdr huffman-tree)))        
-        (if (equal? character char)
-            (cons (make-leaf-node (inc count) character) rest)
-            (cons first (accumulate-count character rest))))))
+; frequency-table->huffman-tree: (listof nodes) -> node
+;    merge all nodes below a single root
+(define (frequency-table->huffman-tree nodes)
+  (define (merge/all l)
+    (if (<= (length l) 1)
+        l
+        (merge/all (merge/front-two (sort/ascending l)))))
+  (define (merge/front-two l)
+    (let ((left (cadr l))
+          (right (car l)))
+      (cons (make-branch-node (+ (node-count left) (node-count right))
+                              left
+                              right)
+            (cddr l))))
+  (car (merge/all nodes)))
 
-; make-leaf-node/all: huffman-tree -> huffman-tree
-(define (make-leaf-node/all tree)
-  (if (<= (length tree) 1)
-      tree
-      (make-leaf-node/all (merge/front-pair (sort tree)))))
-
-; merge/front-pair: huffman-tree -> huffman-tree
-(define (merge/front-pair tree)
-  (let ((left (cadr tree))
-        (right (car tree))
-        (count (+ (node-count (cadr tree)) (node-count (car tree)))))    
-    (cons (make-branch-node count left right) (cddr tree))))
-
-; sort: huffman-tree -> huffman-tree
-(define (sort tree)
-  (if (null? tree)
+; sort/ascending: (listof nodes) -> (listof nodes)
+;   insertion sort
+(define (sort/ascending nodes)
+  (define (insert v l)
+    (cond
+      ((null? l) (list v))
+      ((<= (node-count v) (node-count (car l))) (cons v l))
+      (else (cons (car l) (insert v (cdr l))))))
+  (if (null? nodes)
       '()
-      (insert (car tree) (sort (cdr tree)))))
+      (insert (car nodes) (sort/ascending (cdr nodes)))))
 
-; insert: huffman-tree-node huffman-tree -> huffman-tree
-(define (insert node tree)
-  (cond
-    ((null? tree) (list node))
-    ((<= (node-count node) (node-count (car tree))) (cons node tree))
-    (else (cons (car tree) (insert node (cdr tree))))))
-
-; encode: string huffman-tree -> (listof number)
+; encode: string node -> (listof number)
+;   string with huffman tree to a list of numbers(2base)
 (define (encode source tree)
   (if (null? source)
       '()
