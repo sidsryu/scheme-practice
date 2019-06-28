@@ -45,14 +45,12 @@
 
 ; counting: string -> huffman-tree
 (define (counting source)
-  (define (counting-iter source tree)
-    (if (null? source)
+  (define (counting-iter source begin end tree)
+    (if (= begin end)
         tree
-        (let ((accumulated (accumulate-count (string-ref source 0) tree)))
-          (if (= (string-length source) 1)
-              accumulated
-              (counting-iter (substring source 1) accumulated)))))
-  (counting-iter source '()))
+        (counting-iter source (inc begin) end
+                       (accumulate-count (string-ref source begin) tree))))
+  (counting-iter source 0 (string-length source) '()))
 
 ; accumulate-count: character huffman-tree -> huffman-tree
 (define (accumulate-count character huffman-tree)
